@@ -1,3 +1,4 @@
+import requests, json
 def get_iamToken(token:str):
     q = requests.post('https://iam.api.cloud.yandex.net/iam/v1/tokens',
         json={'yandexPassportOauthToken':token})

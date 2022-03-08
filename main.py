@@ -9,6 +9,7 @@ import time
 from threading import Thread
 import requests
 import json
+import traceback
 from tkinter import messagebox
 import webbrowser
 login_bas=1
@@ -23,6 +24,7 @@ from rich.pretty import pprint
 from rich import inspect
 import yandexcloud
 from clApi import *
+import webbrowser
 #
 def save_settings():
 	with open("settings.json", 'w') as set_prog_f:
@@ -33,7 +35,11 @@ settings ={'projects':
 			[
 				'main',
 			],
-			'current_project':'main'
+			'current_project':'main',
+			'token':'',
+			'svazi':{
+				'main':{}
+			}
 		  }
 
 
@@ -111,35 +117,84 @@ def test():
     print('test')
     print(cloudCombobox.get())
 
-token = 'AQAAAaQVovAA1amHsz0zw3kG2Q'
 
-#iamToken=get_iamToken(token)
-#Organization=get_listOrganization(iamToken)
-#clouds=get_listCloud(iamToken, Organization=Organization['organizations'][1]['id'])
-#clouds=get_listCloud(iamToken)
-#folders=get_listFolders(iamToken, Cloud=clouds['clouds'][1]['id'])
-#functions=get_listFunction(iamToken, folders['folders'][4]['id'])
-#print(functions)
-#print(get_yaInfo(token))
 
 
 def project_new_f():
 	gtjtj= dlg_project_new()
-	settings['projects'].append(gtjtj)
-	cloudCombobox['values']=settings['projects']
-	cloudCombobox.set(gtjtj)
-	settings['current_project']=gtjtj
-	save_settings()
-
+	if gtjtj:
+		settings['projects'].append(gtjtj)
+		settings['svazi'][gtjtj]={}
+		cloudCombobox['values']=settings['projects']
+		cloudCombobox.set(gtjtj)
+		settings['current_project']=gtjtj
+		save_settings()
+	else:
+		project_new_f()
 def project_del_f():
 	settings['projects'].remove(cloudCombobox.get())
+	del settings['svazi'][cloudCombobox.get()]
+	del settings['current_project']
 	cloudCombobox['values']=settings['projects']
 	cloudCombobox.set('')
-	settings['current_project']=''
+	save_settings()
+	if settings['projects']:
+		settings['current_project']=settings['projects'][0]
+		cloudCombobox.set(settings['projects'][0])
+		save_settings()
+	else:
+		project_new_f()
+
+
+def ComboboxSelected(h):
+	settings['current_project']=cloudCombobox.get()
 	save_settings()
 
+def setup_inter():
+	global iamToken
+	iamToken=get_iamToken(settings['token'])
+	clouds=get_listCloud(iamToken)
+	treeClouds={}
+	treeFolders={}
+	for cl in clouds['clouds']:
+		tmp=treeCloud.insert('', 'end', text=cl['name'],tags=('c'),  values=(cl['id']))
+		treeCloud.item(tmp, open=1)
+		treeClouds[cl['id']]=tmp
+		folders=get_listFolders(iamToken, Cloud=cl['id'])
+		for fd in folders['folders']:
+			tmpfd=treeCloud.insert(tmp, 'end', text=fd['name'],tags=('f'), values=(fd['id']))
+			treeFolders[fd['id']]=tmp
+
+
+def CL_selection_e(event):
+	event = treeCloud.item(treeCloud.focus())
+	print(event)
+	type_sel=event['tags'][0]
+	if type_sel=='c':
+		pass
+	elif type_sel=='f':
+		__ = treeFunc.get_children(treeFuncFunc)
+		for _ in __:
+			treeFunc.delete(_)
+		functions=get_listFunction(iamToken, event['values'][0])
+		#print(functions)
+		if functions:
+			for fn in functions['functions']:
+				tmpfd=treeFunc.insert(treeFuncFunc, 'end', text=fn['name'],tags=('Func'), values=(fn['id']))
+def RE_selection_e(event):
+	event = treeFunc.item(treeFunc.focus())
+	print(event)
+	type_sel=event['tags'][0]
+	if type_sel=='API':
+		pass
+	elif type_sel=='Storage':
+		pass
+	elif type_sel=='Func':
+		pass
+
+
 root = tk.Tk()
-root.geometry("500x475")
+root.geometry("1220x600")
 root.title('Serverless-GUI')
 
 
@@ -164,6 +219,7 @@ cloudCombobox = ttk.Combobox(frame1, textvariable=countryvar)
 cloudCombobox.state(["readonly"])
 cloudCombobox['values']=settings['projects']
 cloudCombobox.set(settings['current_project'])
+cloudCombobox.bind('<<ComboboxSelected>>', ComboboxSelected)
 
 tk.Button(frame1, text=buttons['account']['text'],
     command=buttons['account']['cmd']).pack(fill=tk.Y, side=tk.RIGHT, padx=10 )
@@ -183,30 +239,162 @@ frame2 = tk.Frame(master=root,borderwidth=5)
 
 clouds_frame = tk.Frame(master=frame2)
 
-Label(master=clouds_frame, text="Облако").pack(fill=tk.X)
+Label(master=frame2, text="Облако").grid(row=0, column=0)
+columns = ('id')
+treeCloud = ttk.Treeview(frame2, columns=columns, show="tree headings")
 
-treeCloud = ttk.Treeview(clouds_frame)
-treeCloud['columns'] = ('id')
+treeCloud.column('id', width=100, anchor='center')
+treeCloud.heading('id', text='Id')
+treeCloud.bind(" <<TreeviewSelect>>", CL_selection_e)
 
-treeCloud.pack()
+treeCloud.grid(row=1, column=0)
+
 
 #################
 resurs_frame = tk.Frame(master=frame2)
 
 
-Label(master=resurs_frame, text="Ресурс").pack(fill=tk.X)
+Label(master=frame2, text="Ресурс").grid(row=0, column=1)
 
-treeFunc = ttk.Treeview(resurs_frame)
-treeFunc['columns'] = ('id')
+columns = ('id')
+treeFunc = ttk.Treeview(frame2, columns=columns, show="tree headings")
 
-treeFunc.pack()
+treeFunc.column('id', width=100, anchor='center')
+treeFunc.heading('id', text='Id')
+
+
+treeFuncFunc=treeFunc.insert('', 'end',tags=('Func'),  text='Cloud Functions')
+treeFunc.item(treeFuncFunc, open=1)
+treeFuncAPI=treeFunc.insert('', 'end',tags=('API'),  text='API Gateway')
+treeFunc.item(treeFuncAPI, open=1)
+treeFuncStorage=treeFunc.insert('', 'end',tags=('Storage'),  text='Object Storage')
+treeFunc.item(treeFuncStorage, open=1)
+treeFunc.bind(" <<TreeviewSelect>>", RE_selection_e)
+treeFunc.grid(row=1, column=1)
+
+###########################################################
+info_frame = tk.Frame(master=frame2, width=300)
+
+Label(master=frame2, text="Инфо").grid(row=0, column=2)
+
+grid_info_frame = tk.Frame(master=info_frame, width=300)
+text_info_frame = Text(grid_info_frame, width=37, height=10)
+text_info_frame.pack(anchor=tk.N)
+grid_info_frame.pack(fill=tk.X, anchor=tk.N)
+
+
+
+#############
+
+btn_info_frame = tk.Frame(master=info_frame)
+Buttons = {}
+Buttons['1'] = Button(btn_info_frame, text="Помощь")
+Buttons['2'] = Button(btn_info_frame, text="Помощь")
+Buttons['3'] = Button(btn_info_frame, text="Помощь")
+Buttons['4'] = Button(btn_info_frame, text="Помощь")
+Buttons['5'] = Button(btn_info_frame, text="Помощь")
+Buttons['6'] = Button(btn_info_frame, text="Помощь")
+Buttons['7'] = Button(btn_info_frame, text="Помощь")
+Buttons['8'] = Button(btn_info_frame, text="Помощь")
+
+roww = 0
+coll = 0
+for but in Buttons:
+	Buttons[but].grid(row=roww, column=coll, padx=5 , pady=3 , sticky="nsew")
+	coll= coll +1
+	if coll==4:
+		coll = 0
+		roww = roww +1
+
+
+
+btn_info_frame.pack(fill=tk.X)
+info_frame.grid(row=1, column=2)
+
+###########################################################
+svazi_frame = tk.Frame(master=frame2)
+
+
+Label(master=frame2, text="Связи").grid(row=0, column=3)
+
+columns = ('id')
+treeSvazi = ttk.Treeview(frame2, columns=columns, show="tree headings")
+
+treeSvazi.column('id', width=100, anchor='center')
+treeSvazi.heading('id', text='Id')
+
+
+rgrgg=treeSvazi.insert('', 'end', text='Listbox', values=('15KB'))
+treeSvazi.insert(rgrgg, 'end', text='Listbox1', values=('152222KB'))
+treeSvazi.grid(row=1, column=3)
+
+###########################################################
+
 
 #########################
-clouds_frame.pack(fill=tk.X, side=tk.LEFT)
-resurs_frame.pack(fill=tk.X, side=tk.LEFT)
+# clouds_frame.pack(fill=tk.X, side=tk.LEFT)
+# resurs_frame.pack(fill=tk.X, side=tk.LEFT)
+# info_frame.pack(fill=tk.X, side=tk.LEFT)
+# svazi_frame.pack(fill=tk.X, side=tk.LEFT)
+# clouds_frame.grid(row=0, column=0)
+# resurs_frame.grid(row=0, column=1)
+# info_frame.grid(row=0, column=2)
+# svazi_frame.grid(row=0, column=3)
 #################################################
 frame1.pack(fill=tk.X)
 frame2.pack(fill=tk.X)
+
+
+def try_token():
+	try:
+		meta=get_yaInfo(inp_tkn.get())
+		settings['token'] = inp_tkn.get()
+		ya_name=meta['first_name']
+		save_settings()
+		alert(ya_name+', Вы успешно вошли!')
+		reg.destroy()
+		setup_inter()
+	except Exception as e:
+		print(e)
+		reg.destroy()
+		alert('Вы ввели неверный токен!')
+		abraKodabra()
+
+def abraKodabra():
+	if 0:
+		pass
+	else:
+		global reg
+		reg = tk.Tk()
+		reg.title('Вход')
+		reg.geometry('200x100')
+		tk.Label(reg, text='Пожалуйста введите токен').pack()
+		global inp_tkn
+		inp_tkn = tk.Entry(reg)
+		inp_tkn.pack()
+		tk.Button(reg, text='Сохранить', command=try_token).pack()
+
+
+if settings['token']:
+	try:
+		meta=get_yaInfo(settings['token'])
+
+		ya_name=meta['first_name']
+		#alert(ya_name+', Вы успешно вошли!')
+		setup_inter()
+	except BaseException as err:
+		print(err)
+		print(traceback.format_exc())
+		alert('Ваш токен не действует!')
+		alert('Сейчас будет открыта страницы получения токена')
+		webbrowser.open('https://oauth.yandex.ru/authorize?response_type=token&client_id=892c9dc6cb794eb9b3339b73962c5317')
+		abraKodabra()
+else:
+	alert('Сейчас будет открыта страницы получения токена')
+	webbrowser.open('https://oauth.yandex.ru/authorize?response_type=token&client_id=892c9dc6cb794eb9b3339b73962c5317')
+	abraKodabra()
+
+
 
 root.mainloop()
 
