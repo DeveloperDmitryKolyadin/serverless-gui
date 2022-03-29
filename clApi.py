@@ -2,7 +2,7 @@ import requests, json
 def get_iamToken(token:str):
     q = requests.post('https://iam.api.cloud.yandex.net/iam/v1/tokens',
         json={'yandexPassportOauthToken':token})
-
+    #print(json.loads(q.content))
     iamToken=json.loads(q.content)['iamToken']
     return iamToken
 
@@ -40,4 +40,22 @@ def get_listFunction(iamToken, Foldr):
     Folder['folderId']=Foldr
     q = requests.get(f'https://serverless-functions.api.cloud.yandex.net/functions/v1/functions',
         headers={'Authorization': 'Bearer '+iamToken}, params=Folder)
+    return json.loads(q.content)
+
+def get_Cloud(iamToken, cloudId):
+
+    q = requests.get(f'https://resource-manager.api.cloud.yandex.net/resource-manager/v1/clouds/{cloudId}',
+        headers={'Authorization': 'Bearer '+iamToken})
+    return json.loads(q.content)
+
+def get_Folder(iamToken, folderId):
+
+    q = requests.get(f'https://resource-manager.api.cloud.yandex.net/resource-manager/v1/folders/{folderId}',
+        headers={'Authorization': 'Bearer '+iamToken})
+    return json.loads(q.content)
+
+def get_Func(iamToken, functionId):
+
+    q = requests.get(f'https://serverless-functions.api.cloud.yandex.net/functions/v1/functions/{functionId}',
+        headers={'Authorization': 'Bearer '+iamToken})
     return json.loads(q.content)

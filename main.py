@@ -38,7 +38,11 @@ settings ={'projects':
 			'current_project':'main',
 			'token':'',
 			'svazi':{
-				'main':{}
+				'main':{
+					'functions':{},
+					"apigateways":{},
+					"buckets":{}
+					}
 			}
 		  }
 
@@ -166,13 +170,65 @@ def setup_inter():
 			treeFolders[fd['id']]=tmp
 
 
+	for s_fun in settings['svazi'][settings['current_project']]['functions']:
+		name_f =  get_Func(iamToken, s_fun)['name']
+		treeSvazi.insert('', 'end', text='F "' + name_f  + '"', tags=('f'), values=(settings['svazi'][settings['current_project']]['functions'][s_fun]))
+	for s_api in settings['svazi'][settings['current_project']]['apigateways']:
+		pass
+	for s_st in settings['svazi'][settings['current_project']]['buckets']:
+		pass
+
+
 def CL_selection_e(event):
 	event = treeCloud.item(treeCloud.focus())
+	text_info_frame.delete('1.0', 'end')
 	print(event)
 	type_sel=event['tags'][0]
 	if type_sel=='c':
-		pass
+		Cloud_info= get_Cloud(iamToken, event['values'][0])
+		info_v=''
+		for parametr_cl in Cloud_info:
+			if parametr_cl == 'id':
+				info_v=info_v+'Id: '+Cloud_info[parametr_cl]+'\n'
+			elif parametr_cl == 'createdAt':
+				info_v=info_v+'Созданно: '+Cloud_info[parametr_cl]+'\n'
+			elif parametr_cl == 'name':
+				info_v=info_v+'Имя: '+Cloud_info[parametr_cl]+'\n'
+			elif parametr_cl == 'organizationId':
+				info_v=info_v+'Id организации: '+Cloud_info[parametr_cl]+'\n'
+			elif parametr_cl == 'description':
+				info_v=info_v+'Описание: '+Cloud_info[parametr_cl]+'\n'
+
+		text_info_frame.replace('1.0', 'end', chars=info_v)
+		__ = treeFunc.get_children(treeFuncFunc)
+		for _ in __:
+			treeFunc.delete(_)
 	elif type_sel=='f':
+		Folder_info= get_Folder(iamToken, event['values'][0])
+		info_v=''
+		for parametr_cl in Folder_info:
+			if parametr_cl == 'id':
+				info_v=info_v+'Id: '+Folder_info[parametr_cl]+'\n'
+
+			elif parametr_cl == 'createdAt':
+				info_v=info_v+'Созданно: '+Folder_info[parametr_cl]+'\n'
+
+			elif parametr_cl == 'name':
+				info_v=info_v+'Имя: '+Folder_info[parametr_cl]+'\n'
+
+			elif parametr_cl == 'cloudId':
+				info_v=info_v+'Id облака: '+Folder_info[parametr_cl]+'\n'
+
+			elif parametr_cl == 'description':
+				info_v=info_v+'Описание: '+Folder_info[parametr_cl]+'\n'
+
+			elif parametr_cl == 'status':
+				info_v=info_v+'Статус: '+Folder_info[parametr_cl]+'\n'
+
+		text_info_frame.replace('1.0', 'end', chars=info_v)
+
+
+
 		__ = treeFunc.get_children(treeFuncFunc)
 		for _ in __:
 			treeFunc.delete(_)
@@ -183,6 +239,7 @@ def CL_selection_e(event):
 				tmpfd=treeFunc.insert(treeFuncFunc, 'end', text=fn['name'],tags=('Func'), values=(fn['id']))
 def RE_selection_e(event):
 	event = treeFunc.item(treeFunc.focus())
+	text_info_frame.delete('1.0', 'end')
 	print(event)
 	type_sel=event['tags'][0]
 	if type_sel=='API':
@@ -190,11 +247,36 @@ def RE_selection_e(event):
 	elif type_sel=='Storage':
 		pass
 	elif type_sel=='Func':
-		pass
+
+		Func_info= get_Func(iamToken, event['values'][0])
+		info_v=''
+		for parametr_cl in Func_info:
+			if parametr_cl == 'id':
+				info_v=info_v+'Id: '+Func_info[parametr_cl]+'\n'
+
+			elif parametr_cl == 'createdAt':
+				info_v=info_v+'Созданно: '+Func_info[parametr_cl]+'\n'
+
+			elif parametr_cl == 'name':
+				info_v=info_v+'Имя: '+Func_info[parametr_cl]+'\n'
+
+			elif parametr_cl == 'folderId':
+				info_v=info_v+'Id каталога: '+Func_info[parametr_cl]+'\n'
+
+			elif parametr_cl == 'description':
+				info_v=info_v+'Описание: '+Func_info[parametr_cl]+'\n'
+
+			elif parametr_cl == 'httpInvokeUrl':
+				info_v=info_v+'Ur: '+Func_info[parametr_cl]+'\n'
+
+			elif parametr_cl == 'status':
+				info_v=info_v+'Статус: '+Func_info[parametr_cl]+'\n'
+
+		text_info_frame.replace('1.0', 'end', chars=info_v)
 
 
 root = tk.Tk()
-root.geometry("1220x600")
+root.geometry("1225x600")
 root.title('Serverless-GUI')
 
 
@@ -242,8 +324,8 @@ clouds_frame = tk.Frame(master=frame2)
 Label(master=frame2, text="Облако").grid(row=0, column=0)
 columns = ('id')
 treeCloud = ttk.Treeview(frame2, columns=columns, show="tree headings")
-
-treeCloud.column('id', width=100, anchor='center')
+treeCloud.column('#0', width=150)
+treeCloud.column('id', width=150)
 treeCloud.heading('id', text='Id')
 treeCloud.bind(" <<TreeviewSelect>>", CL_selection_e)
 
@@ -259,15 +341,16 @@ Label(master=frame2, text="Ресурс").grid(row=0, column=1)
 columns = ('id')
 treeFunc = ttk.Treeview(frame2, columns=columns, show="tree headings")
 
-treeFunc.column('id', width=100, anchor='center')
+treeFunc.column('#0', width=150)
+treeFunc.column('id', width=150)
 treeFunc.heading('id', text='Id')
 
 
-treeFuncFunc=treeFunc.insert('', 'end',tags=('Func'),  text='Cloud Functions')
+treeFuncFunc=treeFunc.insert('', 'end',tags=('Funcs'),  text='Cloud Functions')
 treeFunc.item(treeFuncFunc, open=1)
-treeFuncAPI=treeFunc.insert('', 'end',tags=('API'),  text='API Gateway')
+treeFuncAPI=treeFunc.insert('', 'end',tags=('APIs'),  text='API Gateway')
 treeFunc.item(treeFuncAPI, open=1)
-treeFuncStorage=treeFunc.insert('', 'end',tags=('Storage'),  text='Object Storage')
+treeFuncStorage=treeFunc.insert('', 'end',tags=('Storages'),  text='Object Storage')
 treeFunc.item(treeFuncStorage, open=1)
 treeFunc.bind(" <<TreeviewSelect>>", RE_selection_e)
 treeFunc.grid(row=1, column=1)
@@ -288,7 +371,7 @@ grid_info_frame.pack(fill=tk.X, anchor=tk.N)
 
 btn_info_frame = tk.Frame(master=info_frame)
 Buttons = {}
-Buttons['1'] = Button(btn_info_frame, text="Помощь")
+Buttons['1'] = Button(btn_info_frame, text="Создать связь")
 Buttons['2'] = Button(btn_info_frame, text="Помощь")
 Buttons['3'] = Button(btn_info_frame, text="Помощь")
 Buttons['4'] = Button(btn_info_frame, text="Помощь")
@@ -317,15 +400,13 @@ svazi_frame = tk.Frame(master=frame2)
 
 Label(master=frame2, text="Связи").grid(row=0, column=3)
 
-columns = ('id')
+columns = ('path')
 treeSvazi = ttk.Treeview(frame2, columns=columns, show="tree headings")
+treeSvazi.column('#0', width=100)
+treeSvazi.column('path', width=200)
+treeSvazi.heading('path', text='Путь')
 
-treeSvazi.column('id', width=100, anchor='center')
-treeSvazi.heading('id', text='Id')
 
-
-rgrgg=treeSvazi.insert('', 'end', text='Listbox', values=('15KB'))
-treeSvazi.insert(rgrgg, 'end', text='Listbox1', values=('152222KB'))
 treeSvazi.grid(row=1, column=3)
 
 ###########################################################
