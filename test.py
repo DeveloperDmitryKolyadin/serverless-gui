@@ -39,5 +39,10 @@ folders=get_listFolders(iamToken, Cloud=clouds['clouds'][1]['id'])
 functions=get_listFunction(iamToken, folders['folders'][4]['id'])
 #print(functions)
 #print(get_yaInfo(token))
-Cloud = get_Cloud(iamToken, clouds['clouds'][1]['id'])
-print(Cloud)
+#Cloud = get_Cloud(iamToken, clouds['clouds'][1]['id'])
+
+
+
+#print(get_Func(iamToken, 'd4e4g1ipqua4vvaqfpib'))
+#ver=get_verFunction(iamToken, get_lastFunction(iamToken, 'd4e4g1ipqua4vvaqfpib')['id'])
+print(get_createFunction_postVer(iamToken, functionId, package))

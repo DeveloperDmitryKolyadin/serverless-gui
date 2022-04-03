@@ -25,6 +25,7 @@ from rich import inspect
 import yandexcloud
 from clApi import *
 import webbrowser
+import shutil
 #
 def save_settings():
 	with open("settings.json", 'w') as set_prog_f:
@@ -39,6 +40,7 @@ settings ={'projects':
 			'token':'',
 			'svazi':{
 				'main':{
+					"home_b":None,
 					'functions':{},
 					"apigateways":{},
 					"buckets":{}
@@ -53,6 +55,33 @@ try:
 		settings = json.loads(set_prog_f.read())
 except:
 	save_settings()
+
+
+
+
+def up_from_f(inp, to, out):
+    session = boto3.session.Session()
+    s3 = session.client(
+        service_name='s3',
+        endpoint_url='https://storage.yandexcloud.net',
+        aws_access_key_id=settings['svazi'][settings['current_project']]['home_b']['aws_access_key_id'],
+        aws_secret_access_key=settings['svazi'][settings['current_project']]['home_b']['aws_secret_access_key'],
+    )
+    s3.upload_file(inp, to, out)
+
+
+
+def push_func(path, id_F):
+    shutil.make_archive(str(id_F), 'zip', path)
+    up_from_f(str(id_F)+'.zip', settings['svazi'][settings['current_project']]['home_b']['b'], str(id_F)+'.zip')
+    #up_from_f(str(id_F)+'.zip', 'test-sgui', str(id_F)+'.zip')
+    package={
+        "bucketName": settings['svazi'][settings['current_project']]['home_b']['b'],
+        "objectName": str(id_F)+'.zip',
+      }
+    return get_createFunction_postVer(iamToken, id_F, package)
+
+
 
 
 #
@@ -128,10 +157,16 @@ def project_new_f():
 	gtjtj= dlg_project_new()
 	if gtjtj:
 		settings['projects'].append(gtjtj)
-		settings['svazi'][gtjtj]={}
+		settings['svazi'][gtjtj]={
+			"home_b":None,
+			'functions':{},
+			"apigateways":{},
+			"buckets":{}
+			}
 		cloudCombobox['values']=settings['projects']
 		cloudCombobox.set(gtjtj)
 		settings['current_project']=gtjtj
+		inp_b_id(n=gtjtj)
 		save_settings()
 	else:
 		project_new_f()
@@ -172,7 +207,7 @@ def setup_inter():
 
 	for s_fun in settings['svazi'][settings['current_project']]['functions']:
 		name_f =  get_Func(iamToken, s_fun)['name']
-		treeSvazi.insert('', 'end', text='F "' + name_f  + '"', tags=('f'), values=(settings['svazi'][settings['current_project']]['functions'][s_fun]))
+		treeSvazi.insert('', 'end', text='F "' + name_f  + '"', tags=('f', s_fun), values=(settings['svazi'][settings['current_project']]['functions'][s_fun]))
 	for s_api in settings['svazi'][settings['current_project']]['apigateways']:
 		pass
 	for s_st in settings['svazi'][settings['current_project']]['buckets']:
@@ -275,6 +310,16 @@ def RE_selection_e(event):
 		text_info_frame.replace('1.0', 'end', chars=info_v)
 
 
+def sinxr_one():
+	item = treeSvazi.item(treeSvazi.focus())
+	path=item['values'][0]
+	id_F=item['tags'][1]
+	print(item)
+	print(path)
+	print(id_F)
+	print(push_func(path, id_F))
+
+
 root = tk.Tk()
 root.geometry("1225x600")
 root.title('Serverless-GUI')
@@ -372,7 +417,7 @@ grid_info_frame.pack(fill=tk.X, anchor=tk.N)
 btn_info_frame = tk.Frame(master=info_frame)
 Buttons = {}
 Buttons['1'] = Button(btn_info_frame, text="Создать связь")
-Buttons['2'] = Button(btn_info_frame, text="Помощь")
+Buttons['2'] = Button(btn_info_frame, text="Синхр.", command=sinxr_one)
 Buttons['3'] = Button(btn_info_frame, text="Помощь")
 Buttons['4'] = Button(btn_info_frame, text="Помощь")
 Buttons['5'] = Button(btn_info_frame, text="Помощь")
@@ -456,6 +501,58 @@ def abraKodabra():
 		tk.Button(reg, text='Сохранить', command=try_token).pack()
 
 
+def inp_b_id(n=''):
+	global nfegeegg
+	nfegeegg=0
+	if n:
+		nfegeegg=n
+	global reg_2
+	reg_2 = tk.Tk()
+	reg_2.title('Выберите бакет')
+	reg_2.geometry('450x200')
+	tk.Label(reg_2, text='Пожалуйста введите имя бакета в котором будут хранится временные файлы:').pack()
+
+	tk.Label(reg_2, text='(Все данные можно получить в веб-консоли)').pack()
+	global inp_b_id_v
+	inp_b_id_v={}
+	inp_b_id_v['b'] = tk.Entry(reg_2)
+	inp_b_id_v['b'].pack()
+	tk.Label(reg_2, text='Id ключа сервисного аккаунта').pack()
+	inp_b_id_v['aws_access_key_id'] = tk.Entry(reg_2)
+	inp_b_id_v['aws_access_key_id'].pack()
+	tk.Label(reg_2, text='Ключ сервисного аккаунта').pack()
+	inp_b_id_v['aws_secret_access_key'] = tk.Entry(reg_2)
+	inp_b_id_v['aws_secret_access_key'].pack()
+
+	tk.Button(reg_2, text='Сохранить', command=sv_b_id).pack()
+
+
+def sv_b_id():
+	try:
+		#meta=get_yaInfo(inp_b_id_v.get())
+		print(nfegeegg)
+		if nfegeegg:
+			settings['svazi'][nfegeegg]['home_b']={}
+			settings['svazi'][nfegeegg]['home_b']['b'] = inp_b_id_v['b'].get()
+			settings['svazi'][nfegeegg]['home_b']['aws_access_key_id'] = inp_b_id_v['aws_access_key_id'].get()
+			settings['svazi'][nfegeegg]['home_b']['aws_secret_access_key'] = inp_b_id_v['aws_secret_access_key'].get()
+		else:
+			settings['svazi'][settings['current_project']]['home_b']={}
+			settings['svazi'][settings['current_project']]['home_b']['b'] = inp_b_id_v['b'].get()
+			settings['svazi'][settings['current_project']]['home_b']['aws_access_key_id'] = inp_b_id_v['aws_access_key_id'].get()
+			settings['svazi'][settings['current_project']]['home_b']['aws_secret_access_key'] = inp_b_id_v['aws_secret_access_key'].get()
+		save_settings()
+		reg_2.destroy()
+	except Exception as e:
+		print(e)
+		print(traceback.format_exc())
+		reg_2.destroy()
+		alert('Вы ввели неверный токен!')
+		inp_b_id()
+
+
+
+
 if settings['token']:
 	try:
 		meta=get_yaInfo(settings['token'])
@@ -475,6 +572,10 @@ else:
 	webbrowser.open('https://oauth.yandex.ru/authorize?response_type=token&client_id=892c9dc6cb794eb9b3339b73962c5317')
 	abraKodabra()
 
+if settings['svazi'][settings['current_project']]['home_b']:
+	pass
+else:
+	inp_b_id()
 
 
 root.mainloop()
